@@ -87,17 +87,16 @@ int main(int argc, char **argv)
 	// Part I
 	timer_count_position.Start();
 	int *pos_yours_gpu = pos_yours_sync.get_gpu_wo();
-	//cudaMemset(pos_yours_gpu, 0, sizeof(int)*n);
-//	CHECK;
+	cudaMemset(pos_yours_gpu, 0, sizeof(int)*n);
 	CountPosition(text_sync.get_gpu_ro(), pos_yours_gpu, n);
-	timer_count_position.Pause();
 	CHECK;
+	timer_count_position.Pause();
 	printf_timer(timer_count_position);
+
 
 	// Part I check
 	const int *golden = pos.data();
 	const int *yours = pos_yours_sync.get_cpu_ro();
-	/* addition */
 	/*for(int i = 0; i < n ; i ++){
 		printf("pos: %d <-> %d", yours[i], golden[i]);
 		if(yours[i] != golden[i])
@@ -105,7 +104,6 @@ int main(int argc, char **argv)
 		else
 			printf("\n");
 	}*/
-	/* ******** */
 	int n_match1 = mismatch(golden, golden+n, yours).first - golden;
 	if (n_match1 != n) {
 		puts("Part I WA!");
@@ -115,15 +113,8 @@ int main(int argc, char **argv)
 	// Part II
 	int *head_yours_gpu = head_yours_sync.get_gpu_wo();
 	cudaMemset(head_yours_gpu, 0, sizeof(int)*n);
-	
 	int n_head = ExtractHead(pos_yours_sync.get_gpu_ro(), head_yours_gpu, n);
-	//printf("><%d\n", n_head);
 	CHECK;
-	//printf("%d\n", n_head);
-	/*for(int i = 0; i < n_head; i++)
-	{
-		printf(">>>%d\n", a[i]);
-	}*/
 
 	// Part II check
 	do {

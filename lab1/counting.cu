@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "counting.h"
 #include <cstdio>
 #include <cassert>
@@ -15,6 +16,7 @@
 
 //const int K = 500;
 const int D = 9; // log(500)
+const int L = 40000500;
 struct is_one
 {
 	__host__ __device__
@@ -29,11 +31,22 @@ __device__ __host__ int CeilAlign(int a, int b) { return CeilDiv(a, b) * b; }
 
 __device__ int BIT[40000500][D];
 
+
+__global__ void BITBuilding1(const char *text, int *pos, int text_size)
+{
+	int idx = (blockIdx.x * blockDim.x + threadIdx.x) % text_size;
+	BIT[idx][0] = 1;
+}
 __global__ void BITBuilding(const char *text, int *pos, int text_size)
 {
 	//printf("BITBuilding\n");	
 	int idx = (blockIdx.x * blockDim.x + threadIdx.x) % text_size;
 	//printf("building: index: %d\n", blockIdx.x * blockDim.x + threadIdx.x);
+	/* test */
+	
+		BIT[0][0] = 1;
+	return;
+	/*88888 */
 	//if(idx >= text_size)return;
 	//int dim = 1;
 	for(int d = 0; d < D; d++)
@@ -51,7 +64,7 @@ __global__ void BITBuilding(const char *text, int *pos, int text_size)
 			int dim = (int)pow(2, d);
 			if(idx < text_size/dim)
 			{
-				BIT[idx][d] = (BIT[2*idx][d-1] && BIT[2*idx+1][d-1]);
+				BIT[idx][d] = (BIT[2*idx][d-1] && BIT[(2*idx+1)][d-1]);
 			}
 
 		}
@@ -68,7 +81,7 @@ __global__ void Counting(const char *text, int *pos, int text_size)
 	//if(idx>=text_size)return;
 	/* gpu part */
 	if(BIT[idx][0] == 0)
-		*(pos+idx) = 0;
+		pos[idx] = 0;//*(pos+idx) = 0;
 	else
 	{
 		int len = 0;
@@ -90,7 +103,7 @@ __global__ void Counting(const char *text, int *pos, int text_size)
 				len += add;
 			}
 
-			if(BIT[(index-1)/2][d+1] == 1)
+			if(BIT[(index-1)/2][ d+1] == 1)
 			{
 
 
@@ -108,7 +121,7 @@ __global__ void Counting(const char *text, int *pos, int text_size)
 
 		while(index >= 0 && add > 0 && d >= 0)
 		{
-			if(BIT[index][d] == 1)
+			if(BIT[index][ d] == 1)
 			{
 				// to left-down
 				len += add;
@@ -127,18 +140,34 @@ __global__ void Counting(const char *text, int *pos, int text_size)
 			add /= 2;
 		}
 
-		*(pos+idx) = len;
+		pos[idx] = len;//*(pos+idx) = len;
 	}
 
 	//	__syncthreads();
 }
+__global__ void printTable()
+{
+	printf("in printTable()\n");
 
+	printf("%d \n", BIT[0][0]);
+	for(int i = 0; i < 10; i ++){
+		for(int j = 0; j < D; j++)
+			printf("%d ", BIT[i][j]);
+		printf("\n");
+	}
+}
 void CountPosition(const char *text, int *pos, int text_size)
 {
-	int threadNum = text_size/2;
-	BITBuilding<<<(text_size)/threadNum + 1, threadNum>>>(text, pos, text_size);
-	//	cudaDeviceSynchronize();
-	Counting<<<(text_size)/threadNum + 1, threadNum>>>(text, pos, text_size);
+	int threadNum = text_size;
+	//BITBuilding<<<1, threadN>>>(text, pos, text_size );
+	//BITBuilding1<<<39063, 1024>>>(text, pos, text_size);
+	BITBuilding1<<<10, 10>>>(text, pos, text_size);
+	cudaDeviceSynchronize();
+	printf("print\n");
+	printTable<<<1, 1>>>();
+	cudaDeviceSynchronize();
+	printf("count\n");
+//	Counting<<<(text_size)/threadNum + 1, threadNum>>>(text, pos, text_size );
 }
 
 int ExtractHead(const int *pos, int *head, int text_size)
