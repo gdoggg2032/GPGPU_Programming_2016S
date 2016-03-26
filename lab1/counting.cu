@@ -13,9 +13,16 @@
 #include <thrust/copy.h>
 #include <thrust/host_vector.h>
 
-const int K = 500;
+//const int K = 500;
 const int D = 9; // log(500)
-
+struct is_one
+{
+	__host__ __device__
+		bool operator()(const int x)
+		{
+			return (x == 1);
+		}
+};
 
 __device__ __host__ int CeilDiv(int a, int b) { return (a-1)/b + 1; }
 __device__ __host__ int CeilAlign(int a, int b) { return CeilDiv(a, b) * b; }
@@ -28,6 +35,7 @@ __global__ void BITBuilding(const char *text, int *pos, int text_size)
 	int idx = (blockIdx.x * blockDim.x + threadIdx.x) % text_size;
 	//printf("building: index: %d\n", blockIdx.x * blockDim.x + threadIdx.x);
 	//if(idx >= text_size)return;
+	//int dim = 1;
 	for(int d = 0; d < D; d++)
 	{
 		if(d == 0)
@@ -47,6 +55,7 @@ __global__ void BITBuilding(const char *text, int *pos, int text_size)
 			}
 
 		}
+		//dim = dim << 1;
 		__syncthreads();
 	}
 }
@@ -121,59 +130,29 @@ __global__ void Counting(const char *text, int *pos, int text_size)
 		*(pos+idx) = len;
 	}
 
-//	__syncthreads();
+	//	__syncthreads();
 }
 
 void CountPosition(const char *text, int *pos, int text_size)
 {
 	int threadNum = text_size/2;
 	BITBuilding<<<(text_size)/threadNum + 1, threadNum>>>(text, pos, text_size);
-//	cudaDeviceSynchronize();
+	//	cudaDeviceSynchronize();
 	Counting<<<(text_size)/threadNum + 1, threadNum>>>(text, pos, text_size);
 }
 
 int ExtractHead(const int *pos, int *head, int text_size)
 {
-	int *buffer;
 	int nhead;
-	cudaMalloc(&buffer, sizeof(int)*text_size*2); // this is enough
 	thrust::device_ptr<const int> pos_d(pos);
-	thrust::device_ptr<int> head_d(head), flag_d(buffer), cumsum_d(buffer+text_size);
-	//printf("0\n");
-	// TODO
-	//return 0;
-	fprintf(stderr, "before TODO\n");
-	//thrust::sequence(cumsum_d, cumsum_d + 3);
-	thrust::device_vector<int> dev_vec(10, 1);
-//	thrust::sequence(dev_vec.begin(), dev_vec.end());
-//	size_t N = 3;
-//	thrust::fill(cumsum_d, cumsum_d+N, (int) 1);
-	fprintf(stderr, "TODO 0\n");
-	//int *raw_ptr = thrust::raw_pointer_cast(cumsum_d);
-	thrust::host_vector<int> host_vec(dev_vec.size());
-	thrust::copy(dev_vec.begin(), dev_vec.end(), host_vec.begin());
-	for(int i = 0; i < host_vec.size(); i++)
-		fprintf(stderr, "vec[%d] == %d\n", i, host_vec[i]);
-    //head[0] = 1;
-	int test[100];
-	cudaMemcpy(test, cumsum_d.get(), 100*sizeof(int), cudaMemcpyDeviceToHost);
-//	thrust::copy_n(cumsum_d, text_size, head_d);
-	fprintf(stderr, "TODO 1\n");
-	for(int i = 0; i < 3; i++)
-	{
-		if(i == test[i])
-			fprintf(stderr, "yes\n");
-		else
-			fprintf(stderr, "no: %d\n", test[i]);
-	}
-	fprintf(stderr, "TODO 2\n");
+	thrust::device_ptr<int> head_d(head);
 	
-	
-	*(head + 1) = 2;
-	nhead = 2;
-	fprintf(stderr, "after TODO\n");
+	thrust::device_vector<int> index_d(text_size);
+	thrust::sequence(index_d.begin(), index_d.end());
 
-	cudaFree(buffer);
+	thrust::device_ptr<int> ret = thrust::copy_if(index_d.begin(), index_d.end(), pos_d, head_d, is_one());
+
+	nhead = ret - head_d;
 	return nhead;
 }
 

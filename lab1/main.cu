@@ -117,11 +117,9 @@ int main(int argc, char **argv)
 	cudaMemset(head_yours_gpu, 0, sizeof(int)*n);
 	
 	int n_head = ExtractHead(pos_yours_sync.get_gpu_ro(), head_yours_gpu, n);
-	printf("><%d\n", n_head);
+	//printf("><%d\n", n_head);
 	CHECK;
-	printf("%d\n", n_head);
-	const int *a = head_yours_sync.get_cpu_ro();
-	printf("aaa:%d\naaa:%d\naaa:%d\n",a[0], a[1],a[2]);
+	//printf("%d\n", n_head);
 	/*for(int i = 0; i < n_head; i++)
 	{
 		printf(">>>%d\n", a[i]);
