@@ -83,7 +83,7 @@ int main(int argc, char **argv)
 
 	// Create timers
 	Timer timer_count_position;
-
+	printf("part1\n");
 	// Part I
 	timer_count_position.Start();
 	int *pos_yours_gpu = pos_yours_sync.get_gpu_wo();
@@ -92,18 +92,18 @@ int main(int argc, char **argv)
 	CHECK;
 	timer_count_position.Pause();
 	printf_timer(timer_count_position);
-
+	printf("part1 check\n");
 
 	// Part I check
 	const int *golden = pos.data();
 	const int *yours = pos_yours_sync.get_cpu_ro();
-	/*for(int i = 0; i < n ; i ++){
+	for(int i = 0; i < n ; i ++){
 		printf("pos: %d <-> %d", yours[i], golden[i]);
 		if(yours[i] != golden[i])
 			printf(", wrong!\n");
 		else
 			printf("\n");
-	}*/
+	}
 	int n_match1 = mismatch(golden, golden+n, yours).first - golden;
 	if (n_match1 != n) {
 		puts("Part I WA!");
