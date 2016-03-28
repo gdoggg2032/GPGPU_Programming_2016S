@@ -1,3 +1,6 @@
+*.tex
+*.dvi
+*.ps
 test/
 test/*
 
