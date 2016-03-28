@@ -163,7 +163,7 @@ __global__ void reverseEachString(char *text, int text_size, int* head_tail, int
         int idx_in_string = idx-left;
         int string_length = right - left;
         //if idx_in_string exceeds this string's length, return
-        if(idx_in_string >= string_length)
+        if(idx_in_string >= string_length/2)
                 return;
 
         int idx_another = string_length - 1 - idx_in_string;
