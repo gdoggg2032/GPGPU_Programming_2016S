@@ -13,6 +13,7 @@
 #include <thrust/sequence.h>
 #include <thrust/copy.h>
 #include <thrust/host_vector.h>
+#include <thrust/unique.h>
 
 #define D 10
 
@@ -23,6 +24,15 @@ struct is_one
 		{
 			return (x == 1);
 		}
+};
+
+struct is_continuous
+{
+        __host__ __device__
+                bool operator()(const int a, const int b)
+                {
+                        return (a+1 == b) && (a != 0) || (a==0 && b==0);
+                }
 };
 
 __device__ __host__ int CeilDiv(int a, int b) { return (a-1)/b + 1; }
@@ -130,6 +140,65 @@ int ExtractHead(const int *pos, int *head, int text_size)
 	return nhead;
 }
 
+__global__ void headTagging(int *head, int n_head, int* output, int text_size)
+{
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if(idx >= n_head)return;
+        if(idx == 0)return;
+        output[head[idx]] = 1;
+}
+
+__global__ void reverseEachString(char *text, int text_size, int* head_tail, int n_string, int* head_label)
+{
+        int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if(idx >= text_size)return;
+
+        // get bound
+        int head_idx = head_label[idx];
+        int left = head_tail[2 * head_idx];
+        int right = head_tail[2 * head_idx + 1];
+
+        //do swap corresponding characters
+        //get index in this string
+        int idx_in_string = idx-left;
+        int string_length = right - left;
+        //if idx_in_string exceeds this string's length, return
+        if(idx_in_string >= string_length)
+                return;
+
+        int idx_another = string_length - 1 - idx_in_string;
+
+        char tmp = text[left + idx_in_string];
+        text[left + idx_in_string] = text[left + idx_another];
+        text[left + idx_another] = tmp;
+}
+
 void Part3(char *text, int *pos, int *head, int text_size, int n_head)
 {
+	thrust::device_ptr<char> text_d(text);
+	thrust::device_ptr<int> pos_d(pos);
+	thrust::device_ptr<int> head_d(head);
+	
+	thrust::device_vector<int> index_d(text_size);
+        thrust::sequence(index_d.begin(), index_d.end());
+
+        thrust::pair<thrust::device_ptr<int>, typeof(index_d.end())> new_end;
+        new_end = thrust::unique_by_key(pos_d, pos_d + text_size, index_d.begin(), is_continuous());
+        if((new_end.second - index_d.begin()) % 2 != 0)
+        {
+                index_d[new_end.second - index_d.begin()] = text_size;
+                new_end.second += 1;
+        }
+
+	thrust::device_vector<int> head_label(text_size, 0);
+
+        headTagging<<<n_head/1024 + 1, 1024>>>(head, n_head, thrust::raw_pointer_cast(head_label.data()), text_size);
+        cudaDeviceSynchronize();
+        thrust::device_vector<int> class_map(text_size, 0);
+        thrust::inclusive_scan(head_label.begin(), head_label.end(), head_label.begin());
+
+
+        reverseEachString<<<39063, 1024>>>(text, text_size, thrust::raw_pointer_cast(index_d.data()), n_head, thrust::raw_pointer_cast(head_label.data()));
+        cudaDeviceSynchronize();
+		
 }
