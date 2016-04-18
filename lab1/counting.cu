@@ -54,7 +54,7 @@ __global__ void BITBuilding_depth(const char *text, int text_size, int d)
 	}
 	else
 	{
-		int dim = (int)pow(2, d);
+		int dim = (int)powf(2, d);
 		if(idx < text_size/dim)
 			BIT[idx][d] = (BIT[2*idx][d-1] && BIT[(2*idx+1)][d-1]);
 	}
