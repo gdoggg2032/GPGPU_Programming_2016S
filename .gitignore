@@ -1,3 +1,4 @@
+*.ppm
 *.tex
 *.dvi
 *.ps
@@ -24,7 +25,8 @@ test/*
 *.jar
 *.rar
 *.tar
-*.zip
+# *.zip
+
 
 # Logs and databases #
 ######################
