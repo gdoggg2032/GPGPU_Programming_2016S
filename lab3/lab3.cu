@@ -36,9 +36,36 @@ void PoissonImageCloning(
 	const int oy, const int ox
 )
 {
+	float *fixed, *buf1, *buf2;
+	cudaMalloc(&fixed, 3*wt,ht*sizeof(float));
+	cudaMalloc(&buf1, 3*wt,ht*sizeof(float));
+	cudaMalloc(&buf2, 3*wt,ht*sizeof(float));
+
+	dim3 gdim(CeilDiv(wt, 32), CeilDiv(ht, 16)), bdim(32, 16);
+	CalculateFixed<<<gdim, bdim>>>(
+			background, target, mask, fixed,
+			wb, hb, wt, ht, oy, ox
+	);
+	cudaMemcpy(buf1, target, sizeof(float)*3*wt*ht, cudaMemcpyDeviceToDevice);
+
+	for(int i = 0; i < 100; i++) {
+		PoissonImageCloningIteration<<<gdim, bdim>>>(
+				fixed, mask, buf1, buf2, wt, ht
+		);
+		PoisonnImageCloningIteration<<gdim, bdim>>>(
+				fixed, mask, buf2, buf1, wt, ht
+		);
+	}
+
 	cudaMemcpy(output, background, wb*hb*sizeof(float)*3, cudaMemcpyDeviceToDevice);
 	SimpleClone<<<dim3(CeilDiv(wt,32), CeilDiv(ht,16)), dim3(32,16)>>>(
-		background, target, mask, output,
+		background, buf1, mask, output,
 		wb, hb, wt, ht, oy, ox
 	);
+
+	cudaFree(fixed);
+	cudaFree(buf1);
+	cudaFree(buf2);
+
 }
+
