@@ -57,7 +57,7 @@ __global__ void PoissonImageCloningIteration(
 		//		if(yt == 0 || yt == ht-1) pixel_around -= 1.0;
 		//		if(xt == 0 || xt == wt-1) pixel_around -= 1.0;
 				float cb_next = (sumCurrent + fixed[curt*3+c]) / pixel_around;
-				buf2[3*curt+c] = min(255.0, max(0.0, cb_next));
+				buf2[3*curt+c] = cb_next;//min(255.0, max(0.0, cb_next));
 			}
 		}
 		/*else {
